@@ -8,10 +8,10 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
 
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = int(os.getenv("PORT", 8000))
     FRONTEND_URL: str = "http://localhost:5173"
 
-    MOCK_FINANCE_BASE_URL: str = "http://127.0.0.1:8000/finance/"
+    MOCK_FINANCE_BASE_URL: str = os.getenv("MOCK_FINANCE_BASE_URL", f"http://127.0.0.1:{os.getenv('PORT', 8000)}/finance/")
     PLAYWRIGHT_HEADLESS: bool = True
 
     APPROVAL_THRESHOLD_INR: float = 100000.0

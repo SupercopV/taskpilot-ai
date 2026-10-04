@@ -68,6 +68,10 @@ async def websocket_task_endpoint(websocket: WebSocket, task_id: str):
 
 # Mount Mock Finance ERP Portal at /finance
 mock_finance_dir = Path(__file__).resolve().parent.parent.parent / "mock-finance-app"
+if not mock_finance_dir.exists():
+    mock_finance_dir = Path("/app/mock-finance-app")
+if not mock_finance_dir.exists():
+    mock_finance_dir = Path(__file__).resolve().parent.parent / "mock-finance-app"
 if mock_finance_dir.exists():
     app.mount("/finance", StaticFiles(directory=str(mock_finance_dir), html=True), name="finance_portal")
 
