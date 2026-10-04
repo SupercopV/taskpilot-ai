@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NexusFinance ERP - Enterprise Accounts Payable</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    code, pre { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+  <!-- Top Navigation -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="h-9 w-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg">
+          NF
+        </div>
+        <div>
+          <h1 class="text-sm font-semibold tracking-wide text-white">NexusFinance Enterprise ERP</h1>
+          <p class="text-xs text-slate-400">Accounts Payable Ledger & Automated Ingestion</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-4">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-1.5 h-1.5 mr-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+          System Operational
+        </span>
+        <span class="text-xs text-slate-400 font-mono" id="portal-current-time"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-slate-850 p-5 rounded-xl border border-slate-800">
+        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Recorded</p>
+        <p class="text-2xl font-bold text-white mt-1" id="stat-total-amount">₹0</p>
+        <p class="text-xs text-emerald-400 mt-1 font-medium">Reconciled in General Ledger</p>
+      </div>
+      <div class="bg-slate-850 p-5 rounded-xl border border-slate-800">
+        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Invoices Ingested</p>
+        <p class="text-2xl font-bold text-white mt-1" id="stat-invoice-count">0</p>
+        <p class="text-xs text-slate-400 mt-1">Simulated ERP Records</p>
+      </div>
+      <div class="bg-slate-850 p-5 rounded-xl border border-slate-800">
+        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">API Verification Rate</p>
+        <p class="text-2xl font-bold text-emerald-400 mt-1">100%</p>
+        <p class="text-xs text-slate-400 mt-1">Exact match audit</p>
+      </div>
+      <div class="bg-slate-850 p-5 rounded-xl border border-slate-800">
+        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Automation Endpoint</p>
+        <p class="text-xs font-mono text-emerald-400 mt-2 truncate">POST /finance/api/invoices</p>
+        <p class="text-xs text-slate-400 mt-1">Playwright & REST Ready</p>
+      </div>
+    </div>
+
+    <!-- Alert Notifications -->
+    <div id="finance-error-alert" class="hidden p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300">
+      <div class="flex items-center space-x-3">
+        <svg class="w-5 h-5 text-rose-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-rose-200" id="finance-error-title">Submission Error</p>
+          <p class="text-xs text-rose-300/90 mt-0.5" id="finance-error-message">Temporary validation error. Please retry.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="finance-success-alert" class="hidden p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+      <div class="flex items-center space-x-3">
+        <svg class="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-emerald-200">Invoice Recorded Successfully</p>
+          <p class="text-xs text-emerald-300/90 mt-0.5" id="finance-success-message">Ledger Entry Created.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid: Form + Invoices Table -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <!-- Ingestion Form (Playwright target) -->
+      <div class="lg:col-span-5 bg-slate-850 p-6 rounded-xl border border-slate-800 shadow-xl space-y-6">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+            <span>Enter Invoice Into Ledger</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Manual entry or Playwright automated computer-use ingestion</p>
+        </div>
+
+        <form id="finance-invoice-form" class="space-y-4" onsubmit="handleInvoiceSubmit(event)">
+          <div>
+            <label for="finance-company-input" class="block text-xs font-semibold text-slate-300 mb-1">Company / Vendor Name *</label>
+            <input 
+              type="text" 
+              id="finance-company-input" 
+              name="company" 
+              required 
+              placeholder="e.g. Acme Corp" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="finance-invoice-number-input" class="block text-xs font-semibold text-slate-300 mb-1">Invoice Number *</label>
+              <input 
+                type="text" 
+                id="finance-invoice-number-input" 
+                name="invoice_number" 
+                required 
+                placeholder="e.g. ACME-1024" 
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono"
+              />
+            </div>
+            <div>
+              <label for="finance-currency-input" class="block text-xs font-semibold text-slate-300 mb-1">Currency</label>
+              <select 
+                id="finance-currency-input" 
+                name="currency" 
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono"
+              >
+                <option value="INR">INR (₹)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="finance-amount-input" class="block text-xs font-semibold text-slate-300 mb-1">Invoice Amount *</label>
+              <input 
+                type="number" 
+                step="0.01" 
+                id="finance-amount-input" 
+                name="amount" 
+                required 
+                placeholder="48500" 
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono"
+              />
+            </div>
+            <div>
+              <label for="finance-due-date-input" class="block text-xs font-semibold text-slate-300 mb-1">Due Date *</label>
+              <input 
+                type="text" 
+                id="finance-due-date-input" 
+                name="due_date" 
+                required 
+                placeholder="YYYY-MM-DD" 
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="finance-notes-input" class="block text-xs font-semibold text-slate-300 mb-1">Notes / Verification Ref</label>
+            <textarea 
+              id="finance-notes-input" 
+              name="notes" 
+              rows="2" 
+              placeholder="Ingested via TaskPilot AI Autonomous Agent" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+            ></textarea>
+          </div>
+
+          <!-- Controlled Failure Simulation Toggle for Demo -->
+          <div class="p-3 bg-slate-900/60 rounded-lg border border-slate-800 flex items-center space-x-3">
+            <input 
+              type="checkbox" 
+              id="finance-simulate-failure" 
+              name="simulate_failure" 
+              class="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500 bg-slate-800 border-slate-700"
+            />
+            <label for="finance-simulate-failure" class="text-xs text-slate-400 select-none cursor-pointer">
+              Simulate 1st-attempt validation error <span class="text-amber-400 font-medium">(Recovery Demo)</span>
+            </label>
+          </div>
+
+          <button 
+            type="submit" 
+            id="finance-submit-btn" 
+            class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-medium text-sm rounded-lg shadow-lg shadow-emerald-900/20 transition duration-150 flex items-center justify-center space-x-2"
+          >
+            <span>Record Invoice in System</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Invoices Ledger & Verification Search -->
+      <div class="lg:col-span-7 bg-slate-850 p-6 rounded-xl border border-slate-800 shadow-xl space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-bold text-white">General Ledger: Invoices</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Live verified records stored in company database</p>
+          </div>
+          <div class="relative w-full sm:w-64">
+            <input 
+              type="text" 
+              id="finance-search-input" 
+              oninput="handleSearch(this.value)" 
+              placeholder="Search company, invoice #..." 
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            />
+            <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-lg border border-slate-800">
+          <table class="min-w-full divide-y divide-slate-800 text-left" id="finance-invoices-table">
+            <thead class="bg-slate-900 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <tr>
+                <th class="py-3 px-3">Record ID</th>
+                <th class="py-3 px-3">Vendor / Company</th>
+                <th class="py-3 px-3">Invoice #</th>
+                <th class="py-3 px-3 text-right">Amount</th>
+                <th class="py-3 px-3">Due Date</th>
+                <th class="py-3 px-3">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800 text-xs font-mono text-slate-300" id="invoices-table-body">
+              <!-- Loaded via JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    document.getElementById('portal-current-time').innerText = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+
+    let invoicesData = [];
+    let failureTriggerCount = 0;
+
+    async function loadInvoices() {
+      try {
+        const res = await fetch('/finance/api/invoices');
+        if (res.ok) {
+          invoicesData = await res.json();
+          renderInvoices(invoicesData);
+        }
+      } catch (err) {
+        console.error("Error loading finance invoices:", err);
+      }
+    }
+
+    function renderInvoices(items) {
+      const tbody = document.getElementById('invoices-table-body');
+      tbody.innerHTML = '';
+      let total = 0;
+
+      if (!items || items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500 font-sans">No matching finance records found.</td></tr>`;
+        return;
+      }
+
+      items.forEach(inv => {
+        total += parseFloat(inv.amount || 0);
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition duration-150";
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 font-bold text-emerald-400">${inv.record_id}</td>
+          <td class="py-2.5 px-3 font-sans font-medium text-white">${inv.company}</td>
+          <td class="py-2.5 px-3 font-mono text-slate-300">${inv.invoice_number}</td>
+          <td class="py-2.5 px-3 text-right font-bold text-slate-100">${inv.currency} ${Number(inv.amount).toLocaleString()}</td>
+          <td class="py-2.5 px-3 text-slate-400">${inv.due_date}</td>
+          <td class="py-2.5 px-3">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              ${inv.status}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('stat-total-amount').innerText = '₹' + total.toLocaleString();
+      document.getElementById('stat-invoice-count').innerText = items.length;
+    }
+
+    function handleSearch(query) {
+      const q = query.toLowerCase().trim();
+      if (!q) {
+        renderInvoices(invoicesData);
+        return;
+      }
+      const filtered = invoicesData.filter(inv => 
+        (inv.company && inv.company.toLowerCase().includes(q)) ||
+        (inv.invoice_number && inv.invoice_number.toLowerCase().includes(q)) ||
+        (inv.record_id && inv.record_id.toLowerCase().includes(q))
+      );
+      renderInvoices(filtered);
+    }
+
+    async function handleInvoiceSubmit(e) {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        company: form.company.value.trim(),
+        invoice_number: form.invoice_number.value.trim(),
+        amount: parseFloat(form.amount.value),
+        currency: form.currency.value,
+        due_date: form.due_date.value.trim(),
+        notes: form.notes.value.trim(),
+        simulate_failure: form.simulate_failure.checked
+      };
+
+      const errorAlert = document.getElementById('finance-error-alert');
+      const successAlert = document.getElementById('finance-success-alert');
+      errorAlert.classList.add('hidden');
+      successAlert.classList.add('hidden');
+
+      try {
+        const res = await fetch('/finance/api/invoices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          errorAlert.classList.remove('hidden');
+          document.getElementById('finance-error-message').innerText = result.detail || "Temporary validation error. Please retry.";
+          return;
+        }
+
+        successAlert.classList.remove('hidden');
+        document.getElementById('finance-success-message').innerText = `Record created successfully with ID: ${result.record_id}`;
+        
+        // Reset simulate failure checkbox if it was checked
+        if (form.simulate_failure.checked) {
+          form.simulate_failure.checked = false;
+        }
+
+        await loadInvoices();
+      } catch (err) {
+        errorAlert.classList.remove('hidden');
+        document.getElementById('finance-error-message').innerText = "Network or server connection failed.";
+      }
+    }
+
+    // Initialize
+    loadInvoices();
+  </script>
+</body>
+</html>
