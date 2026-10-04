@@ -85,9 +85,16 @@ export default function App() {
     if (!taskId) return;
 
     // WebSocket connection
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/ws/tasks/${taskId}`;
+    let wsUrl;
+    const apiUrl = import.meta.env.VITE_API_URL;
+    if (apiUrl) {
+      const cleanUrl = apiUrl.replace(/^http/, 'ws');
+      wsUrl = `${cleanUrl}/ws/tasks/${taskId}`;
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      wsUrl = `${protocol}//${host}/ws/tasks/${taskId}`;
+    }
 
     try {
       const ws = new WebSocket(wsUrl);
