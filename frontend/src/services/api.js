@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_URL || '';
+const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim();
+const API_URL = rawApiUrl ? rawApiUrl.replace(/\/+$/, '') : '';
 
 export async function checkHealth() {
   const res = await fetch(`${API_URL}/api/health`);

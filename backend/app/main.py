@@ -36,6 +36,24 @@ origins = [
 if settings.FRONTEND_URL and settings.FRONTEND_URL not in origins:
     origins.append(settings.FRONTEND_URL)
 
+import re
+from starlette.types import ASGIApp, Scope, Receive, Send
+
+class NormalizePathMiddleware:
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope.get("type") in ("http", "websocket"):
+            path = scope.get("path", "")
+            if "//" in path:
+                scope["path"] = re.sub(r"/+", "/", path)
+                if "raw_path" in scope:
+                    scope["raw_path"] = re.sub(b"/+", b"/", scope["raw_path"])
+        await self.app(scope, receive, send)
+
+app.add_middleware(NormalizePathMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"] if os.getenv("RENDER") or not settings.FRONTEND_URL else origins,

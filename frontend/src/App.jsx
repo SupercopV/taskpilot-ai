@@ -87,8 +87,8 @@ export default function App() {
     // WebSocket connection
     let wsUrl;
     const apiUrl = import.meta.env.VITE_API_URL;
-    if (apiUrl) {
-      const cleanUrl = apiUrl.replace(/^http/, 'ws');
+    if (apiUrl && apiUrl.trim()) {
+      const cleanUrl = apiUrl.trim().replace(/\/+$/, '').replace(/^http/, 'ws');
       wsUrl = `${cleanUrl}/ws/tasks/${taskId}`;
     } else {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
